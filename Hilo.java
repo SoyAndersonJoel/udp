@@ -1,8 +1,7 @@
 package udp;
 
 import java.net.*;
-import java.io.*;
-import java.util.List;
+import java.util.*;
 
 public class Hilo extends Thread {
     private DatagramSocket socket;
@@ -18,31 +17,28 @@ public class Hilo extends Thread {
     @Override
     public void run() {
         try {
-            String recibido = new String(paquete.getData(), 0, paquete.getLength()).trim();
-            int id = Integer.parseInt(recibido);
+            // Convertir el mensaje recibido en ID de estudiante
+            String mensaje = new String(paquete.getData(), 0, paquete.getLength()).trim();
+            int idBuscado = Integer.parseInt(mensaje);
 
-            String respuesta;
-            Estudiante estudiante = buscarEstudiante(id);
-            if (estudiante != null) {
-                respuesta = estudiante.toString();
-            } else {
-                respuesta = "Estudiante no encontrado";
-            }
+            // Buscar el estudiante en la lista
+            Estudiante estudiante = estudiantes.stream()
+                    .filter(e -> e.getId() == idBuscado)
+                    .findFirst()
+                    .orElse(null);
 
-            byte[] respuestaBytes = respuesta.getBytes();
-            DatagramPacket respuestaPaquete = new DatagramPacket(
-                respuestaBytes, respuestaBytes.length, 
-                paquete.getAddress(), paquete.getPort());
-            socket.send(respuestaPaquete);
+            // Generar la respuesta
+            String respuesta = (estudiante != null) ? estudiante.toString() : "Estudiante no encontrado";
+
+            // Enviar la respuesta al cliente
+            byte[] bufferRespuesta = respuesta.getBytes();
+            InetAddress ipCliente = paquete.getAddress();
+            int puertoCliente = paquete.getPort();
+            DatagramPacket paqueteRespuesta = new DatagramPacket(bufferRespuesta, bufferRespuesta.length, ipCliente, puertoCliente);
+            socket.send(paqueteRespuesta);
+
         } catch (Exception e) {
             e.printStackTrace();
         }
-    }
-
-    private Estudiante buscarEstudiante(int id) {
-        for (Estudiante e : estudiantes) {
-            if (e.getId() == id) return e;
-        }
-        return null;
     }
 }
